@@ -1,29 +1,57 @@
 "use client"
 import axios from "axios"
-import { useRouter } from 'next/navigation'
-// import router from "next/router"
-import { useState } from "react"
+import { redirect, useRouter } from 'next/navigation'
+import { useEffect, useState } from "react"
+// import GoogleAuth from "@/components/GoogleAuth/GoogleAuth"
+import { getProviders, signIn } from "next-auth/react"
+import { Button } from "flowbite-react"
+import { FcGoogle } from "react-icons/fc"
+import { getServerSession } from "next-auth"
+import { authOptions } from "../api/auth/[...nextauth]/route"
 
-export default function Login() {
+export default async function Login() {
     const [userName, setUserName] = useState('')
     const [password, setPassword] = useState('')
     const [detailsNotMatch, setDetailsNotMatch] = useState(false)
-
+    const [session, setSession] = useState<any>();
+    const [loading, setLoading] = useState(false)
     const router = useRouter()
+
+    useEffect(() => {
+        axios.get(`/api/authentication/check-login`).then((response) => {
+            const userData = JSON.parse(JSON.stringify(response.data));
+            setSession(userData.name);
+        });
+    }, [loading]);
+
+
+    if (session) {
+        redirect('/store')
+    }
+
+    const sessions = await getServerSession(authOptions).then((v) => { return v })
+    console.log(sessions)
+    if (sessions) {
+        redirect('/store')
+    }
 
     const handleLogin = async () => {
         const response = await axios.post('/api/authentication/login', {
             userName,
             password
         });
-        console.log(response.data.success)
+        console.log(response.data.name)
         if (response.data.success) {
             router.push('/store')
-        } else {
+        }
+        else {
             setDetailsNotMatch(true)
         }
 
     }
+
+    const providers = await getProviders() || [];
+    console.log('google auth ', providers)
 
     return (
         <section className="bg-gray-50 ">
@@ -74,6 +102,31 @@ export default function Login() {
                             >
                                 Sign in
                             </button>
+                            <div className="flex">
+                                <hr className="w-1/2 mt-3"></hr>
+                                <p className="text-slate-500">or</p>
+                                <hr className="w-1/2 mt-3"></hr>
+                            </div>
+                            {/* <Button color="light" className="bg-blue-500 hover:bg-blue-600 w-full h-auto text-white font-medium rounded-lg text-sm  text-center">
+                                {provider.name === "Google" ?
+                                <FcGoogle className="mx-2 h-6 w-6 bg-white rounded-xl" size={15} />
+                               : null}
+                                Sign in with Google
+                                 {provider.name}
+                            </Button> */}
+                            {Object.values(providers).map((provider, i) =>
+                                <Button key={i}
+                                    color="light"
+                                    className="bg-blue-500 hover:bg-blue-600 w-full h-auto text-white font-medium rounded-lg text-sm  text-center"
+                                    onClick={() => signIn(provider.id)}
+                                >
+                                    {provider.name === "Google" ?
+                                        <FcGoogle className="mx-2 h-6 w-6 bg-white rounded-xl" size={15} />
+                                        : null}
+                                    Sign in with Google
+                                    {provider.name}
+                                </Button>
+                            )}
                             <p className="text-sm font-light text-gray-500">
                                 Don’t have an account yet? <a href="/sign-up" className="font-medium text-primary-600 hover:underline ">Sign up</a>
                             </p>
