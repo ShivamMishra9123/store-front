@@ -1,32 +1,49 @@
 import { NextResponse } from "next/server";
 import { builder } from '@builder.io/sdk'
 import { createHash } from 'crypto';
+import { serialize } from 'cookie';
+import { cookies } from 'next/headers'
+
 
 builder.init(process.env.NEXT_PUBLIC_BUILDER_API_KEY!);
 
 
 export async function POST(request: Request) {
 
-    const { userName, password } = await request.json();
-    console.log(userName, "     ", password)
+    const { email, password } = await request.json();
+    console.log(email, "     ", password)
 
 
     try {
         const passwordHash = createHash('sha256').update(password).digest('hex');
         const user = await builder.getAll('authentication', {
             query: {
-                "data.username": userName,
+                "data.email": email,
             },
         })
-        if (user.length == 0) {
+        const cookieStore = cookies()
+        const userDataCookie = cookieStore.get('user')
+
+        if (userDataCookie) {
+            console.log("cookie data --->", userDataCookie)
+            return NextResponse.json(userDataCookie)
+        } else if (user.length == 0) {
             return NextResponse.json({ success: false });
         }
-        // console.log(user[0].data.password)
-        // console.log("passwordHash ", passwordHash)
 
-        if (user[0].data.password === passwordHash) {
+
+        if (user[0].data?.password === passwordHash) {
             console.log("successfully matched")
-            return NextResponse.json({ success: true });
+            const userCookie = serialize('user', JSON.stringify({ user: user }), {
+                httpOnly: true,
+                maxAge: 60 * 60 * 24, // 24 hours in seconds
+                sameSite: 'lax',
+                path: '/',
+            });
+            const response = NextResponse.json({ success: true });
+            response.headers.append('Set-Cookie', userCookie);
+
+            return response;
         }
         else {
             return NextResponse.json({ success: false })

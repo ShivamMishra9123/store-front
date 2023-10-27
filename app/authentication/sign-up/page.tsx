@@ -1,26 +1,40 @@
 "use client"
 
 import axios from "axios";
+import { useRouter } from 'next/navigation'
+// import { getServerSession } from "next-auth";
 import { useState } from "react"
+// import { authOptions } from "../api/auth/[...nextauth]/route";
 
 export default function Signup() {
 
-    const [userName, setUserName] = useState('');
+    const [email, setEmail] = useState('');
+    const [name, setName] = useState('')
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('')
     const [passwordNotMatch, setPasswordNotMatch] = useState(false)
+    const [detailsNotMatch, setDetailsNotMatch] = useState(false)
+    const router = useRouter()
 
+    // const session = await getServerSession(authOptions);
+    // console.log('session ', session)
 
     const handleSignUp = async () => {
         try {
             if (password === confirmPassword) {
                 const response = await axios.post('/api/authentication/signup', {
-                    userName: userName,
+                    email: email,
+                    name: name,
                     password: password,
                     date: new Date
                 });
-                console.log(response.data.success)
-                return response.data
+                if (response.data.success) {
+                    router.push('/login')
+                }
+                else {
+                    setDetailsNotMatch(true)
+                }
+
             }
             else {
                 setPasswordNotMatch(true)
@@ -41,12 +55,22 @@ export default function Signup() {
                         </h1>
                         <form className="space-y-4 md:space-y-6" action="#">
                             <div>
-                                <label className="block mb-2 text-sm font-medium text-gray-900 ">Your Username</label>
+                                <label className="block mb-2 text-sm font-medium text-gray-900 ">Email</label>
+                                <input
+                                    type="email"
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg  block w-full p-2.5 "
+                                    placeholder="email"
+                                    onChange={(e) => setEmail(e.currentTarget.value)}
+                                    onClick={() => setDetailsNotMatch(false)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-gray-900 ">Name</label>
                                 <input
                                     type="text"
                                     className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg  block w-full p-2.5 "
-                                    placeholder="Username"
-                                    onChange={(e) => setUserName(e.currentTarget.value)}
+                                    placeholder="your name"
+                                    onChange={(e) => setName(e.currentTarget.value)}
                                 />
                             </div>
                             <div>
@@ -84,6 +108,11 @@ export default function Signup() {
                             {(passwordNotMatch) &&
                                 <span className="flex items-center font-bold tracking-wide text-red-600 text-sm ml-1">
                                     Password not match
+                                </span>
+                            }
+                            {(detailsNotMatch) &&
+                                <span className="flex items-center font-bold tracking-wide text-red-600 text-sm ml-1">
+                                    Email is already registered
                                 </span>
                             }
                             <button
